@@ -4,13 +4,16 @@ node_modules/
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Build
+# Build artifacts
 *.zip
 *.crx
 *.pem
@@ -18,3 +21,6 @@ desktop.ini
 # Temp
 *.log
 tmp/
+
+# Gemini
+.gemini/

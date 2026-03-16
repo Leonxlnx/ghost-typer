@@ -1,150 +1,167 @@
-# 👻 Ghost Typer
+<p align="center">
+  <img src="icons/icon128.png" alt="Ghost Typer" width="100">
+</p>
 
-**Simulate realistic human typing in Google Docs.**
+<h1 align="center">Ghost Typer</h1>
 
-Ghost Typer is an open-source Chrome extension that takes your pasted text and types it character-by-character into Google Docs — with natural speed variations, intentional typos and corrections, punctuation pauses, and thinking breaks. The result looks like genuinely hand-typed text in Google Docs' revision history.
+<p align="center">
+  <strong>Simulate realistic human typing in Google Docs.</strong>
+</p>
 
-![Ghost Typer Screenshot](https://raw.githubusercontent.com/user/ghost-typer/main/screenshots/popup.png)
+<p align="center">
+  <a href="https://github.com/Leonxlnx/ghost-typer/releases"><img src="https://img.shields.io/github/v/release/Leonxlnx/ghost-typer?style=flat-square&color=0071e3" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Leonxlnx/ghost-typer?style=flat-square" alt="License"></a>
+  <a href="https://github.com/Leonxlnx/ghost-typer/stargazers"><img src="https://img.shields.io/github/stars/Leonxlnx/ghost-typer?style=flat-square" alt="Stars"></a>
+</p>
 
----
+<br>
 
-## ✨ Features
+Ghost Typer is a Chrome extension that takes pasted text and types it character-by-character into Google Docs — with natural speed variations, realistic typos and corrections, punctuation pauses, and thinking breaks. The result looks like genuinely hand-typed text in the revision history.
 
-| Feature | Description |
-|---|---|
-| 🎯 **Human-Like Speed** | Gaussian-distributed typing speed that varies naturally, not robotic |
-| ✍️ **Typo Simulation** | Makes realistic mistakes using adjacent QWERTY keys, then corrects them |
-| ⏸️ **Thinking Pauses** | Random pauses between sentences, like a real person thinking |
-| 📝 **Punctuation Delays** | Natural hesitation after periods, commas, and other punctuation |
-| 🎛️ **Highly Configurable** | 9 tunable parameters — speed, mistakes, pauses, and more |
-| ⏯️ **Full Controls** | Start, pause, resume, and stop at any time |
-| 📊 **Live Progress** | Real-time progress bar with ETA |
-| 💾 **Persistent Settings** | Your configuration saves automatically |
-| 🌙 **Premium Dark UI** | Sleek glassmorphic popup design |
+<br>
 
----
+## Features
 
-## 🚀 Installation
+- **Human-like speed** — Gaussian-distributed typing speed that varies naturally, not a robotic constant rate
+- **Typo simulation** — Makes realistic mistakes using adjacent QWERTY keys, then corrects them
+- **Go-back-and-revise** — Occasionally deletes a recent section and retypes it, mimicking real editing behavior
+- **Thinking pauses** — Random pauses between sentences, as if considering the next thought
+- **Extended breaks** — Rare 20–60 second pauses that simulate checking your phone or getting up
+- **Punctuation delays** — Natural hesitation after periods, commas, and other punctuation
+- **Markdown support** — Bold, italic, headings, and bullet points are formatted automatically
+- **Full playback controls** — Start, pause, resume, and stop at any time
+- **Live progress tracking** — Real-time progress bar with ETA
+- **Persistent settings** — Your configuration saves automatically across sessions
 
-### From Source (Developer Mode)
+## How It Works
+
+Ghost Typer uses the **Chrome DevTools Protocol** (CDP) to send trusted keyboard events directly to the browser — the same type of events that are generated when you physically press keys. This means Google Docs treats every character as a real keystroke.
+
+```
+Popup UI  →  Background Service Worker  →  Chrome Debugger API  →  CDP Key Events  →  Google Docs
+```
+
+The typing engine uses **Gaussian (normal) distribution** for all timing instead of uniform randomness. This creates the natural "burst and hesitate" pattern that real humans exhibit while typing.
+
+### Typo Engine
+
+When a typo triggers, it follows a realistic sequence:
+
+1. Types a wrong key (QWERTY-adjacent to the intended key)
+2. Optionally continues 1–2 more characters before "noticing"
+3. Pauses briefly, simulating the moment of recognition
+4. Backspaces to delete the mistake
+5. Types the correct character
+
+### Revision Behavior
+
+Very rarely (~0.3% chance per character), the engine will:
+
+1. Delete the last 3–8 characters
+2. Pause as if rethinking the sentence
+3. Retype the same text
+
+This mimics the common behavior of re-reading and reconsidering what you just wrote.
+
+## Installation
 
 1. **Download** or clone this repository:
    ```bash
-   git clone https://github.com/user/ghost-typer.git
+   git clone https://github.com/Leonxlnx/ghost-typer.git
    ```
 
-2. Open **Chrome** and navigate to:
-   ```
-   chrome://extensions
-   ```
+2. Open **Chrome** and navigate to `chrome://extensions`
 
 3. Enable **Developer mode** (toggle in the top-right corner)
 
-4. Click **"Load unpacked"** and select the `ghost-typer` folder
+4. Click **Load unpacked** and select the `ghost-typer` folder
 
-5. The Ghost Typer icon 👻 should appear in your extensions bar
+5. The Ghost Typer icon will appear in your extensions toolbar
 
----
+> **Note:** When you first start typing, Chrome will show a "debugging is being started" notification bar. This is normal — the extension uses the Debugger API to send trusted key events.
 
-## 📖 Usage
+## Usage
 
 1. Open a **Google Docs** document
 2. Place your **cursor** where you want the text to appear
 3. Click the **Ghost Typer** extension icon
 4. **Paste your text** into the text area
-5. Adjust the **configuration sliders** to your preference
-6. Click **Start Typing** and watch the magic happen ✨
+5. Adjust the settings to your preference
+6. Click **Start** and let it run
 
----
+### Configuration
 
-## ⚙️ Configuration
-
-| Parameter | Range | Default | Description |
+| Setting | Range | Default | Description |
 |---|---|---|---|
-| Typing Speed | 30 – 200 WPM | 80 WPM | Base words per minute |
-| Speed Variation | 0 – 50% | 25% | How much speed fluctuates naturally |
-| Mistake Rate | 0 – 15% | 3% | Chance of making a typo per character |
-| Punctuation Delay | 0 – 2000ms | 400ms | Extra pause after . , ! ? |
-| Paragraph Pause | 0.5 – 10s | 3.0s | Delay when hitting Enter |
-| Thinking Pauses | On / Off | On | Random pauses between sentences |
+| Speed | 30–200 WPM | 80 WPM | Base typing speed in words per minute |
+| Variation | 0–50% | 25% | How much the speed fluctuates naturally |
+| Mistakes | 0–15% | 3% | Probability of a typo per character |
+| Punctuation delay | 0–2000 ms | 400 ms | Extra pause after `.` `,` `!` `?` |
+| Paragraph pause | 0.5–10 s | 3.0 s | Delay when hitting Enter |
+| Thinking pauses | On / Off | On | Random mid-sentence and between-sentence pauses |
 
-### Tips for Realistic Results
+### Tips
 
-- **Speed**: 60–100 WPM is typical for students typing essays
-- **Mistakes**: 2–5% feels natural; above 8% looks sloppy
-- **Variation**: 20–35% gives the most human-like inconsistency
-- **Pauses**: Keep thinking pauses ON for longer documents
+- **60–100 WPM** is typical for students writing essays
+- **2–5% mistakes** feels natural; above 8% looks sloppy
+- **20–35% variation** gives the most human-like inconsistency
+- Keep **thinking pauses on** for longer documents — it's the single most important setting for realism
 
----
+## Privacy
 
-## 🏗️ How It Works
+Ghost Typer runs **100% locally** in your browser.
 
-Ghost Typer uses three core systems:
+- Does not send your text anywhere
+- Does not collect analytics or telemetry
+- Does not require any login, account, or internet connection
+- Does not inject any tracking scripts
+- All source code is open and auditable
 
-### 1. Google Docs Connector
-Locates the hidden `docs-texteventtarget-iframe` in Google Docs and uses `document.execCommand('insertText')` to inject characters one at a time — the same way real keystrokes are registered.
+## Project Structure
 
-### 2. Human Typing Simulator
-Uses **Gaussian (normal) distribution** for timing, not uniform randomness. This creates the natural "burst and hesitate" pattern that real humans exhibit while typing.
+```
+ghost-typer/
+├── manifest.json      # Chrome extension manifest (MV3)
+├── background.js      # Service worker — CDP typing engine
+├── popup.html         # Extension popup UI
+├── popup.css          # Popup styles
+├── popup.js           # Popup controller & state management
+├── content.js         # Content script bridge (legacy, not active)
+├── injected.js        # Page-context typing (legacy, not active)
+├── icons/
+│   ├── icon16.png
+│   ├── icon48.png
+│   └── icon128.png
+├── LICENSE
+└── README.md
+```
 
-### 3. Typo Engine
-When a typo triggers, it:
-1. Types a wrong key (QWERTY-adjacent)
-2. Optionally continues 1–2 more characters
-3. Pauses (like noticing the error)
-4. Backspaces to delete the mistake
-5. Types the correct character
+> `content.js` and `injected.js` are from the earlier `execCommand`-based architecture (v1.2–v1.3). The current version uses CDP exclusively through `background.js`. They are kept for reference.
 
----
+## Permissions
 
-## 🛡️ Privacy
+Ghost Typer requests only three permissions:
 
-Ghost Typer:
-- ❌ Does **NOT** send your text anywhere
-- ❌ Does **NOT** collect any analytics
-- ❌ Does **NOT** require any login or account
-- ✅ Runs **100% locally** in your browser
-- ✅ Is **fully open source** — inspect every line of code
+| Permission | Why |
+|---|---|
+| `activeTab` | Access the current Google Docs tab to type into it |
+| `storage` | Save your settings between sessions |
+| `debugger` | Use Chrome DevTools Protocol to send trusted keyboard events |
 
----
+## Contributing
 
-## 📋 Roadmap
-
-- [x] Core typing simulation
-- [x] Typo engine with adjacent-key errors
-- [x] Configurable speed, mistakes, and pauses
-- [x] Pause / resume / stop controls
-- [ ] AI Detection Analyzer — check if text "reads like AI"
-- [ ] Text Humanizer — rewrite AI-generated text to sound human
-- [ ] Google Slides support
-- [ ] Typing profiles (save different configurations)
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to:
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch (`git checkout -b feature/your-feature`)
+3. Commit your changes (`git commit -m "Add your feature"`)
+4. Push to the branch (`git push origin feature/your-feature`)
 5. Open a Pull Request
 
----
-
-## 📄 License
+## License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
----
-
-## ⚠️ Disclaimer
+## Disclaimer
 
 This tool is provided for educational and productivity purposes. Users are responsible for complying with their institution's policies regarding document creation. The authors are not responsible for any misuse of this software.
-
----
-
-<p align="center">
-  Made with 💜 by the Ghost Typer community
-</p>
