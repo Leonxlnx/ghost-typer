@@ -76,6 +76,32 @@ async function detachDebugger() {
   });
 }
 
+// ── Overlay to block accidental clicks ──
+async function injectOverlay() {
+  try {
+    await cdp('Runtime.evaluate', {
+      expression: `
+        (function() {
+          if (document.getElementById('ghost-typer-overlay')) return;
+          const ov = document.createElement('div');
+          ov.id = 'ghost-typer-overlay';
+          ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;cursor:not-allowed;background:rgba(0,0,0,0.02);display:flex;align-items:flex-start;justify-content:center;padding-top:8px;';
+          ov.innerHTML = '<div style="background:#1d1d1f;color:#fff;padding:6px 16px;border-radius:20px;font:13px/1 -apple-system,sans-serif;opacity:0.85;pointer-events:none;">👻 Ghost Typer is typing…</div>';
+          document.body.appendChild(ov);
+        })()
+      `
+    });
+  } catch (e) { /* ignore */ }
+}
+
+async function removeOverlay() {
+  try {
+    await cdp('Runtime.evaluate', {
+      expression: `document.getElementById('ghost-typer-overlay')?.remove()`
+    });
+  } catch (e) { /* ignore */ }
+}
+
 // ── Key press via CDP ──
 // This generates REAL trusted keyboard events
 async function pressKey(char) {
@@ -183,6 +209,9 @@ async function startTyping(tid, cfg) {
 
   const text = cfg.text;
 
+  // Block accidental clicks
+  await injectOverlay();
+
   // Small initial delay
   await sleep(gauss(400, 100));
 
@@ -242,6 +271,7 @@ async function startTyping(tid, cfg) {
     broadcast({ action: 'TYPING_ERROR', error: e.message });
   } finally {
     state = 'idle';
+    await removeOverlay();
     await detachDebugger();
   }
 }
@@ -290,6 +320,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'STOP_TYPING':
       state = 'stopped';
       if (pauseResolve) { pauseResolve(); pauseResolve = null; }
+      removeOverlay();
       detachDebugger();
       sendResponse({ success: true });
       break;
