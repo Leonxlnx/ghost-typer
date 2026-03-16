@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Ghost Typer",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Simulate realistic human typing in Google Docs. Paste your text and watch it get typed naturally — with variable speed, typos, corrections, and thinking pauses.",
   "permissions": [
     "activeTab",

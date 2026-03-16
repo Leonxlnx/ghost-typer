@@ -1,13 +1,16 @@
 /* ==============================================
-   Ghost Typer — Injected Script (runs in MAIN world)
+   Ghost Typer — Injected Script (MAIN WORLD)
    
-   This script runs in the PAGE context (not the
-   extension's isolated world) so it can actually
-   interact with Google Docs' internal event system.
+   This runs in the PAGE context so it can interact
+   with Google Docs' internal editor via execCommand.
    ============================================== */
 
 (function() {
   'use strict';
+
+  // Avoid double-loading
+  if (window.__ghostTyperInjected) return;
+  window.__ghostTyperInjected = true;
 
   // ── State ──
   let _state = 'idle';
@@ -43,89 +46,107 @@
     return new Promise(r => { _pauseResolve = r; });
   }
 
-  // ── Google Docs text insertion ──
-  // The KEY insight: we must set .textContent on the editable element
-  // inside the texteventtarget iframe, then fire an 'input' event.
-  // Google Docs reads from that element on input events.
+  // ── Google Docs Interaction ──
+  // Strategy: Get the iframe's document, focus the contenteditable,
+  // then use execCommand('insertText') which MUST run in main world.
 
-  function getTarget() {
+  function getIframeTarget() {
     const iframe = document.querySelector('.docs-texteventtarget-iframe');
-    if (!iframe) return null;
+    if (!iframe) {
+      console.warn('👻 No .docs-texteventtarget-iframe found');
+      return null;
+    }
     try {
-      const doc = iframe.contentDocument;
-      if (!doc) return null;
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      if (!doc) {
+        console.warn('👻 Cannot access iframe contentDocument');
+        return null;
+      }
       const el = doc.querySelector('[contenteditable="true"]');
-      if (!el) return null;
-      return { doc, el };
+      if (!el) {
+        console.warn('👻 No contenteditable element inside iframe');
+        return null;
+      }
+      return { doc, el, win: iframe.contentWindow };
     } catch (e) {
+      console.warn('👻 Iframe access error:', e.message);
       return null;
     }
   }
 
+  function focusEditor() {
+    // Click the editor area to make sure Google Docs has focus
+    const pages = document.querySelectorAll('.kix-page-content-wrapper');
+    if (pages.length > 0) {
+      const page = pages[0];
+      const rect = page.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + 100;
+      
+      page.dispatchEvent(new MouseEvent('mousedown', {
+        bubbles: true, cancelable: true, clientX: x, clientY: y
+      }));
+      page.dispatchEvent(new MouseEvent('mouseup', {
+        bubbles: true, cancelable: true, clientX: x, clientY: y
+      }));
+      page.dispatchEvent(new MouseEvent('click', {
+        bubbles: true, cancelable: true, clientX: x, clientY: y
+      }));
+    }
+  }
+
+  /**
+   * Insert a single character using execCommand('insertText').
+   * This works because we're running in the MAIN world,
+   * not in Chrome's extension isolated world.
+   */
   function typeChar(char) {
-    const t = getTarget();
+    const t = getIframeTarget();
     if (!t) return false;
+
+    // Make sure the editable element has focus
     t.el.focus();
 
     if (char === '\n') {
-      // Simulate Enter
-      t.el.dispatchEvent(new KeyboardEvent('keydown', {
+      // For Enter, we need to simulate the key event
+      // because execCommand doesn't handle newlines well in Google Docs
+      const enterProps = {
         key: 'Enter', code: 'Enter', keyCode: 13, which: 13,
         bubbles: true, cancelable: true
-      }));
-      // Google Docs also needs the input event for Enter
-      t.el.textContent = '\n';
-      t.el.dispatchEvent(new InputEvent('input', {
-        bubbles: true, inputType: 'insertParagraph', composed: true
-      }));
-      // Clean up
-      t.el.textContent = '';
+      };
+      t.el.dispatchEvent(new KeyboardEvent('keydown', enterProps));
+      t.doc.execCommand('insertParagraph', false, null);
+      t.el.dispatchEvent(new KeyboardEvent('keyup', enterProps));
       return true;
     }
 
-    // For regular characters:
-    // 1) Fire keydown
-    t.el.dispatchEvent(new KeyboardEvent('keydown', {
-      key: char, keyCode: char.charCodeAt(0), which: char.charCodeAt(0),
-      bubbles: true, cancelable: true
-    }));
-
-    // 2) Set the character as textContent — THIS is what Google Docs reads
-    t.el.textContent = char;
-
-    // 3) Fire compositionend-like or input — Google Docs will pick up the textContent
-    t.el.dispatchEvent(new InputEvent('input', {
-      bubbles: true, data: char, inputType: 'insertText', composed: true
-    }));
-
-    // 4) Clear for next char
-    t.el.textContent = '';
-
-    // 5) Fire keyup
-    t.el.dispatchEvent(new KeyboardEvent('keyup', {
-      key: char, keyCode: char.charCodeAt(0), which: char.charCodeAt(0),
-      bubbles: true, cancelable: true
-    }));
+    // The magic line: execCommand in MAIN world context
+    const success = t.doc.execCommand('insertText', false, char);
+    
+    if (!success) {
+      console.warn('👻 execCommand failed for char:', char);
+      
+      // Fallback: try compositionstart → textContent → compositionend
+      t.el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+      t.el.dispatchEvent(new CompositionEvent('compositionupdate', { data: char, bubbles: true }));
+      t.el.dispatchEvent(new CompositionEvent('compositionend', { data: char, bubbles: true }));
+    }
 
     return true;
   }
 
   function doBackspace() {
-    const t = getTarget();
+    const t = getIframeTarget();
     if (!t) return false;
     t.el.focus();
 
-    t.el.dispatchEvent(new KeyboardEvent('keydown', {
+    const props = {
       key: 'Backspace', code: 'Backspace', keyCode: 8, which: 8,
       bubbles: true, cancelable: true
-    }));
-    t.el.dispatchEvent(new InputEvent('input', {
-      bubbles: true, inputType: 'deleteContentBackward', composed: true
-    }));
-    t.el.dispatchEvent(new KeyboardEvent('keyup', {
-      key: 'Backspace', code: 'Backspace', keyCode: 8, which: 8,
-      bubbles: true, cancelable: true
-    }));
+    };
+    t.el.dispatchEvent(new KeyboardEvent('keydown', props));
+    t.doc.execCommand('delete', false, null);
+    t.el.dispatchEvent(new KeyboardEvent('keyup', props));
     return true;
   }
 
@@ -154,21 +175,44 @@
   // ── Main loop ──
   async function run() {
     _state = 'typing';
+    console.log('👻 Ghost Typer: Starting to type', _text.length, 'characters');
 
-    // Click editor to restore focus
-    const editor = document.querySelector('.kix-appview-editor');
-    if (editor) editor.click();
-    await sleep(200);
+    // Step 1: Focus the editor
+    focusEditor();
+    await sleep(400);
 
-    const t = getTarget();
+    // Step 2: Verify iframe target
+    const t = getIframeTarget();
     if (!t) {
+      console.error('👻 Ghost Typer: Cannot find Google Docs iframe!');
+      // Log debug info
+      const iframes = document.querySelectorAll('iframe');
+      console.log('👻 Found', iframes.length, 'iframes:');
+      iframes.forEach((f, i) => console.log(`  [${i}]`, f.className || '(no class)', f.src?.substring(0, 50)));
+      
       window.postMessage({ from: 'ghost-typer', action: 'ERROR', error: 'Cannot find Google Docs editor. Click inside your document and try again.' }, '*');
       _state = 'idle';
       return;
     }
+
+    // Step 3: Focus the contenteditable
     t.el.focus();
+    console.log('👻 Ghost Typer: Editor found, element:', t.el.tagName, 'contentEditable:', t.el.contentEditable);
+
+    // Quick test: try inserting a test character and deleting it
+    const testResult = t.doc.execCommand('insertText', false, '.');
+    console.log('👻 Ghost Typer: execCommand test result:', testResult);
+    if (testResult) {
+      // Delete the test character
+      t.doc.execCommand('delete', false, null);
+      console.log('👻 Ghost Typer: Test passed! execCommand works from main world.');
+    } else {
+      console.warn('👻 Ghost Typer: execCommand returned false - may not work');
+    }
+
     await sleep(gauss(300, 80));
 
+    // Main typing loop
     for (_pos = 0; _pos < _text.length; _pos++) {
       if (_state === 'stopped') break;
       if (_state === 'paused') await waitPause();
@@ -184,14 +228,14 @@
         typeChar(adjKey(c));
         await sleep(Math.max(40, gauss(180, 60)));
         if (_state === 'stopped') break;
-        // Sometimes 1 extra char before noticing
+
         const extra = Math.random() < 0.25 ? 1 : 0;
         for (let i = 0; i < extra && _pos + i + 1 < _text.length; i++) {
           typeChar(_text[_pos + i + 1]);
           await sleep(charDelay());
           if (_state === 'stopped') break;
         }
-        // Backspace to fix
+
         for (let i = 0; i < extra + 1; i++) {
           await sleep(gauss(70, 15));
           doBackspace();
@@ -211,27 +255,28 @@
       }
       await sleep(d);
 
-      // Progress
+      // Progress every 3 chars
       if (_pos % 3 === 0) {
         window.postMessage({ from: 'ghost-typer', action: 'PROGRESS', current: _pos + 1, total: _text.length }, '*');
       }
     }
 
     if (_state !== 'stopped') {
+      console.log('👻 Ghost Typer: Typing complete!');
       window.postMessage({ from: 'ghost-typer', action: 'DONE', total: _text.length }, '*');
       _state = 'idle';
     }
   }
 
-  // ── Incoming commands (from content script via postMessage) ──
+  // ── Message listener ──
   window.addEventListener('message', (e) => {
     if (!e.data || e.data.from !== 'ghost-typer-cs') return;
-    const msg = e.data;
 
-    switch (msg.action) {
+    switch (e.data.action) {
       case 'START':
-        _text = msg.text;
-        _cfg = msg.config;
+        console.log('👻 Ghost Typer: Received START command');
+        _text = e.data.text;
+        _cfg = e.data.config;
         if (_state === 'typing') {
           _state = 'stopped';
           setTimeout(run, 150);
@@ -253,5 +298,5 @@
     }
   });
 
-  console.log('👻 Ghost Typer injected into page context');
+  console.log('👻 Ghost Typer: injected into page context (MAIN world)');
 })();
