@@ -92,8 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
     progCard.style.display = (s === 'typing' || s === 'paused' || s === 'done') ? 'block' : 'none';
     if (s === 'idle') { barFill.style.width = '0%'; pctText.textContent = '0%'; }
 
-    pauseBtn.textContent = s === 'paused' ? '▶ Resume' : '⏸ Pause';
-    startBtn.textContent = s === 'done' ? '▶ Restart' : '▶ Start';
+    pauseBtn.textContent = s === 'paused' ? 'Resume' : 'Pause';
+    startBtn.textContent = s === 'done' ? 'Restart' : 'Start';
     if (s === 'done') startBtn.disabled = false;
   }
 

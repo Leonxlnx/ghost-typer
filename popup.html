@@ -12,7 +12,7 @@
     <!-- Header -->
     <div class="header">
       <div class="header-left">
-        <span class="header-icon">👻</span>
+        <svg class="header-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
         <span class="header-title">Ghost Typer</span>
       </div>
       <div class="badge" id="statusBadge" data-status="idle">
@@ -24,13 +24,13 @@
     <!-- Error Banner -->
     <div class="error-banner" id="errorBanner" style="display:none">
       <span id="errorText"></span>
-      <button class="error-close" id="errorClose">✕</button>
+      <button class="error-close" id="errorClose">&times;</button>
     </div>
 
     <!-- Text -->
     <div class="card">
-      <textarea id="textInput" rows="4" placeholder="Paste the text you want typed…" spellcheck="false"></textarea>
-      <div class="meta"><span id="charCount">0</span> chars · <span id="wordCount">0</span> words</div>
+      <textarea id="textInput" rows="4" placeholder="Paste the text you want typed... Markdown supported." spellcheck="false"></textarea>
+      <div class="meta"><span id="charCount">0</span> chars &middot; <span id="wordCount">0</span> words</div>
     </div>
 
     <!-- Settings -->
@@ -80,14 +80,14 @@
 
     <!-- Buttons -->
     <div class="actions">
-      <button class="btn primary" id="startBtn">▶ Start</button>
-      <button class="btn" id="pauseBtn" disabled>⏸ Pause</button>
-      <button class="btn danger" id="stopBtn" disabled>⏹ Stop</button>
+      <button class="btn primary" id="startBtn">Start</button>
+      <button class="btn" id="pauseBtn" disabled>Pause</button>
+      <button class="btn danger" id="stopBtn" disabled>Stop</button>
     </div>
 
     <div class="footer">
-      <span>v1.5 · MIT</span>
-      <a href="https://github.com/Leonxlnx/ghost-typer" target="_blank">GitHub ↗</a>
+      <span>v1.6 &middot; MIT</span>
+      <a href="https://github.com/Leonxlnx/ghost-typer" target="_blank">GitHub</a>
     </div>
   </div>
 
