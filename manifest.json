@@ -1,12 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Ghost Typer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Simulate realistic human typing in Google Docs. Paste your text and watch it get typed naturally — with variable speed, typos, corrections, and thinking pauses.",
   "permissions": [
     "activeTab",
-    "storage",
-    "scripting"
+    "storage"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -29,6 +28,12 @@
       "matches": ["https://docs.google.com/document/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["https://docs.google.com/*"]
     }
   ]
 }
